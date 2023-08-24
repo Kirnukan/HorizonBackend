@@ -2,7 +2,7 @@ include .env
 export
 
 MIGRATE := $(shell go env GOPATH)/bin/migrate
-MIGRATIONS_PATH = /home/hako/HorizonPlugin/backend/db/migrations
+MIGRATIONS_PATH = $(DB_PATH)/migrations
 PG_CONN_STR="postgres://$(PG_USER):$(PG_PASS)@$(PG_HOST):$(PG_PORT)/$(PG_DBNAME)?sslmode=$(PG_SSLMODE)"
 
 
