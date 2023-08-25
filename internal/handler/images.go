@@ -1,23 +1,28 @@
 package handler
 
 import (
+	"HorizonBackend/internal/service"
 	"encoding/json"
-	"github.com/redis/go-redis/v9"
+	"github.com/gorilla/mux"
 	"net/http"
 )
 
-func GetImageTest(rdb *redis.Client) http.HandlerFunc {
+func GetImagesByFamilyAndGroup(s *service.ImageService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		image, err := rdb.HGetAll(r.Context(), "image:1").Result()
+		vars := mux.Vars(r)
+		family := vars["family"]
+		group := vars["group"]
+
+		images, err := s.GetImagesByFamilyAndGroup(family, group)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, "Failed to fetch images", http.StatusInternalServerError)
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		encodeErr := json.NewEncoder(w).Encode(image)
-		if encodeErr != nil {
-			return
+		err = json.NewEncoder(w).Encode(images)
+		if err != nil {
+			http.Error(w, "Failed to encode images to JSON", http.StatusInternalServerError)
 		}
 	}
 }

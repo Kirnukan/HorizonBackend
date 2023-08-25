@@ -14,6 +14,7 @@ CREATE TABLE Images (
                         group_id INT REFERENCES Groups(id) ON DELETE CASCADE,
                         name VARCHAR(255) NOT NULL,
                         file_path TEXT NOT NULL,
+                        thumb_path TEXT NOT NULL,
                         usage_count INT DEFAULT 0,
                         meta_tags TEXT[]
 );
