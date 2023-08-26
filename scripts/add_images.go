@@ -46,7 +46,52 @@ func compressImage(inputPath string, outputPath string) error {
 	return err
 }
 
+func toInterfaceSlice(slice []int) []interface{} {
+	s := make([]interface{}, len(slice))
+	for i, v := range slice {
+		s[i] = v
+	}
+	return s
+}
+
 func AddImagesFromFolder(db *sql.DB, baseFolder string) {
+	// Шаг 1: Проверка существования файлов
+	rows, err := db.Query(`SELECT id, file_path FROM Images`)
+	if err != nil {
+		panic(err)
+	}
+	defer rows.Close()
+
+	var idsToDelete []int
+	for rows.Next() {
+		var id int
+		var filePath string
+		if err := rows.Scan(&id, &filePath); err != nil {
+			panic(err)
+		}
+		absolutePath := filepath.Join(baseFolder, filePath)
+		if _, err := os.Stat(absolutePath); os.IsNotExist(err) {
+			idsToDelete = append(idsToDelete, id)
+		}
+	}
+
+	// Удаляем записи, которых нет на диске
+
+	if len(idsToDelete) > 0 {
+		idsStr := ""
+		for i := range idsToDelete {
+			idsStr += fmt.Sprintf("$%d,", i+1)
+		}
+		idsStr = strings.TrimSuffix(idsStr, ",")
+
+		query := "DELETE FROM Images WHERE id IN (" + idsStr + ")"
+		_, err = db.Exec(query, toInterfaceSlice(idsToDelete)...)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	// Шаг 2: Добавление новых файлов
 	familyDirs, err := os.ReadDir(baseFolder)
 	if err != nil {
 		panic(err)
@@ -89,6 +134,12 @@ func AddImagesFromFolder(db *sql.DB, baseFolder string) {
 					continue
 				}
 				imageName := strings.TrimSuffix(imageFile.Name(), filepath.Ext(imageFile.Name()))
+
+				// Пропустим файлы с суффиксом "_thumb"
+				if strings.Contains(imageName, "_thumb") {
+					continue
+				}
+
 				imagePath := filepath.Join("static", "images", familyName, groupName, imageFile.Name())
 				thumbPath := ""
 
@@ -97,13 +148,21 @@ func AddImagesFromFolder(db *sql.DB, baseFolder string) {
 				} else {
 					thumbPath = filepath.Join("static", "images", familyName, groupName, imageName+"_thumb"+filepath.Ext(imageFile.Name()))
 
-					err = compressImage(filepath.Join(baseFolder, familyName, groupName, imageFile.Name()), filepath.Join(baseFolder, familyName, groupName, imageName+"_thumb"+filepath.Ext(imageFile.Name())))
-					if err != nil {
-						panic(err)
+					// Проверяем, существует ли уже сжатое изображение
+					originalFilePath := filepath.Join(baseFolder, familyName, groupName, imageFile.Name())
+					thumbFilePath := filepath.Join(baseFolder, familyName, groupName, imageName+"_thumb"+filepath.Ext(imageFile.Name()))
+					if _, err := os.Stat(thumbFilePath); os.IsNotExist(err) {
+						err = compressImage(originalFilePath, thumbFilePath)
+						if err != nil {
+							panic(err)
+						}
 					}
 				}
 
-				_, err := db.Exec(`INSERT INTO Images (name, file_path, thumb_path, group_id) VALUES ($1, $2, $3, (SELECT id FROM Groups WHERE name = $4))`, imageName, imagePath, thumbPath, groupName)
+				_, err := db.Exec(`
+                    INSERT INTO Images (name, file_path, thumb_path, group_id)
+                    VALUES ($1, $2, $3, (SELECT id FROM Groups WHERE name = $4))
+                    ON CONFLICT (name, group_id) DO NOTHING`, imageName, imagePath, thumbPath, groupName)
 				if err != nil {
 					panic(err)
 				}
