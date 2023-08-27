@@ -25,12 +25,11 @@ func (s *ImageService) GetImagesByFamilyAndGroup(family, group string) ([]model.
 	// 2. Получение изображений
 	images, err := s.repo.GetImagesByFamilyAndGroup(family, group)
 	if err != nil {
-		log.Printf("Error fetching images for family: %s and group: %s, Error: %v", family, group, err)
+		log.Printf("Service error fetching images for family: %s and group: %s, Error: %v", family, group, err)
 		return nil, err
 	}
 
-	// 3. Преобразование данных (простой пример: увеличение счетчика использования)
-	// В реальной ситуации вы, возможно, захотите обновить это значение в базе данных
+	// 3. Преобразование данных
 	for i := range images {
 		images[i].UsageCount++
 	}
@@ -52,4 +51,13 @@ func (s *ImageService) GetImageByIDAndIncreaseUsage(imageID int) (model.Image, e
 
 func (s *ImageService) SearchImages(keyword, family string) ([]model.Image, error) {
 	return s.repo.SearchImagesByKeywordAndFamily(keyword, family)
+}
+
+func (s *ImageService) GetImageByNumber(family, group, imageNumber string) (*model.Image, error) {
+	image, err := s.repo.FindImageByNumber(family, group, imageNumber)
+	if err != nil {
+		log.Printf("Service error fetching image by number for family: %s, group: %s, number: %s, Error: %v", family, group, imageNumber, err)
+		return nil, err
+	}
+	return image, nil
 }

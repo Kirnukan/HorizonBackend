@@ -1,4 +1,4 @@
-package main
+package router
 
 import (
 	"HorizonBackend/internal/handler"
@@ -16,8 +16,8 @@ func NewRouter(db *sql.DB) *mux.Router {
 	imageService := service.NewImageService(imageRepo)
 
 	// Регистрация обработчика
+	r.HandleFunc("/{family}/{group}/{number:[0-9]+}", handler.GetImageByNumber(imageService)).Methods("GET")
 	r.HandleFunc("/{family}/{group}/", handler.GetImagesByFamilyAndGroup(imageService)).Methods("GET")
-	r.HandleFunc("/image/{id:[0-9]+}", handler.GetImageByID(imageService)).Methods("GET")
 	//можете использовать этот роут для поиска изображений,
 	//передавая в запросе параметры keyword и family.
 	//Например: /search?keyword=Form&family=Forms.

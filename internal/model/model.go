@@ -16,6 +16,7 @@ type Image struct {
 	GroupID    int      `json:"group_id"`
 	Name       string   `json:"name"`
 	FilePath   string   `json:"file_path"`
+	ThumbPath  string   `json:"thumb_path"`
 	UsageCount int      `json:"usage_count"`
 	MetaTags   []string `json:"meta_tags"`
 }

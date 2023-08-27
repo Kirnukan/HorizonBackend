@@ -2,9 +2,11 @@ package main
 
 import (
 	"HorizonBackend/config"
+	"HorizonBackend/internal/router"
 	"HorizonBackend/scripts"
 	"fmt"
 	_ "github.com/lib/pq"
+	"log"
 	"net/http"
 )
 
@@ -28,9 +30,12 @@ func main() {
 	scripts.AddImagesFromFolder(db, "./static/images")
 
 	// Создаем роутер
-	r := NewRouter(db)
+	r := router.NewRouter(db)
 
 	// Запускаем HTTP-сервер на порту 8080
 	fmt.Println("Server started on :8080")
-	http.ListenAndServe(":8080", r)
+	err = http.ListenAndServe(":8080", r)
+	if err != nil {
+		log.Fatalf("Failed to start server: %v", err)
+	}
 }
