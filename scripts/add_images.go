@@ -13,7 +13,7 @@ import (
 )
 
 func compressImage(inputPath string, outputPath string) error {
-	fmt.Println("Processing:", inputPath) // <-- Добавим эту строку для вывода имени обрабатываемого файла
+	fmt.Println("Processing:", inputPath)
 	file, err := os.Open(inputPath)
 	if err != nil {
 		return err

@@ -37,3 +37,19 @@ func (s *ImageService) GetImagesByFamilyAndGroup(family, group string) ([]model.
 
 	return images, nil
 }
+
+func (s *ImageService) GetImageByIDAndIncreaseUsage(imageID int) (model.Image, error) {
+	// Увеличиваем счетчик использования
+	err := s.repo.IncreaseUsageCount(imageID)
+	if err != nil {
+		return model.Image{}, err
+	}
+
+	// Получаем изображение
+	img, err := s.repo.GetImageByID(imageID)
+	return img, err
+}
+
+func (s *ImageService) SearchImages(keyword, family string) ([]model.Image, error) {
+	return s.repo.SearchImagesByKeywordAndFamily(keyword, family)
+}

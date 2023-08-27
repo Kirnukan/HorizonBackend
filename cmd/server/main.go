@@ -5,6 +5,7 @@ import (
 	"HorizonBackend/scripts"
 	"fmt"
 	_ "github.com/lib/pq"
+	"net/http"
 )
 
 func main() {
@@ -23,5 +24,13 @@ func main() {
 		}
 	}()
 
+	// Этот скрипт добавляет изображения из папки в вашу базу данных
 	scripts.AddImagesFromFolder(db, "./static/images")
+
+	// Создаем роутер
+	r := NewRouter(db)
+
+	// Запускаем HTTP-сервер на порту 8080
+	fmt.Println("Server started on :8080")
+	http.ListenAndServe(":8080", r)
 }
