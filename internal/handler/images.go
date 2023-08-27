@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"HorizonBackend/config"
 	"HorizonBackend/internal/service"
 	"encoding/json"
 	"github.com/gorilla/mux"
@@ -9,8 +10,10 @@ import (
 	"strconv"
 )
 
-func GetImagesByFamilyAndGroup(s *service.ImageService) http.HandlerFunc {
+func GetImagesByFamilyAndGroup(s *service.ImageService, cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		baseURL := cfg.BaseURL
+
 		vars := mux.Vars(r)
 		family := vars["family"]
 		group := vars["group"]
@@ -20,6 +23,12 @@ func GetImagesByFamilyAndGroup(s *service.ImageService) http.HandlerFunc {
 			log.Printf("Error fetching images by family and group: %v", err)
 			http.Error(w, "Failed to fetch images", http.StatusInternalServerError)
 			return
+		}
+
+		// Преобразование путей к изображениям
+		for i := range images {
+			images[i].FilePath = baseURL + images[i].FilePath
+			images[i].ThumbPath = baseURL + images[i].ThumbPath
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -60,8 +69,10 @@ func GetImageByID(s *service.ImageService) http.HandlerFunc {
 	}
 }
 
-func SearchImages(s *service.ImageService) http.HandlerFunc {
+func SearchImages(s *service.ImageService, cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		baseURL := cfg.BaseURL
+
 		keyword := r.URL.Query().Get("keyword")
 		family := r.URL.Query().Get("family")
 
@@ -71,16 +82,24 @@ func SearchImages(s *service.ImageService) http.HandlerFunc {
 			return
 		}
 
+		for i := range images {
+			images[i].FilePath = baseURL + images[i].FilePath
+			images[i].ThumbPath = baseURL + images[i].ThumbPath
+		}
+
 		w.Header().Set("Content-Type", "application/json")
 		err = json.NewEncoder(w).Encode(images)
 		if err != nil {
+			log.Printf("Failed to encode images to JSON: %v", err)
 			http.Error(w, "Failed to encode images to JSON", http.StatusInternalServerError)
 		}
 	}
 }
 
-func GetImageByNumber(service *service.ImageService) http.HandlerFunc {
+func GetImageByNumber(service *service.ImageService, cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		baseURL := cfg.BaseURL
+
 		vars := mux.Vars(r)
 		family := vars["family"]
 		group := vars["group"]
@@ -92,6 +111,17 @@ func GetImageByNumber(service *service.ImageService) http.HandlerFunc {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+
+		// Увеличение счетчика использования
+		err = service.IncreaseUsageCount(image.ID) // Предполагая, что у вашей структуры изображения есть поле ID
+		if err != nil {
+			log.Printf("Error increasing usage count: %v", err)
+			// Ошибка при увеличении счетчика использования не должна мешать
+			// отправке изображения пользователю, поэтому здесь мы просто логируем ошибку.
+		}
+
+		image.FilePath = baseURL + image.FilePath
+		image.ThumbPath = baseURL + image.ThumbPath
 
 		w.Header().Set("Content-Type", "application/json")
 		err = json.NewEncoder(w).Encode(image)

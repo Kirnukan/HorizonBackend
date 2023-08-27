@@ -61,3 +61,7 @@ func (s *ImageService) GetImageByNumber(family, group, imageNumber string) (*mod
 	}
 	return image, nil
 }
+
+func (s *ImageService) IncreaseUsageCount(imageID int) error {
+	return s.repo.IncreaseUsageCount(imageID)
+}

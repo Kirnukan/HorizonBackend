@@ -13,6 +13,7 @@ type Config struct {
 	PgPass    string
 	PgDBName  string
 	PgSSLMode string
+	BaseURL   string
 }
 
 func Load() (*Config, error) {
@@ -29,5 +30,6 @@ func Load() (*Config, error) {
 		PgPass:    os.Getenv("PG_PASS"),
 		PgDBName:  os.Getenv("PG_DBNAME"),
 		PgSSLMode: os.Getenv("PG_SSLMODE"),
+		BaseURL:   os.Getenv("BASE_URL"),
 	}, nil
 }

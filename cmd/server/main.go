@@ -30,7 +30,7 @@ func main() {
 	scripts.AddImagesFromFolder(db, "./static/images")
 
 	// Создаем роутер
-	r := router.NewRouter(db)
+	r := router.NewRouter(db, cfg)
 
 	// Запускаем HTTP-сервер на порту 8080
 	fmt.Println("Server started on :8080")
