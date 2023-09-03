@@ -10,7 +10,7 @@ import (
 	"strconv"
 )
 
-func GetImagesByFamilyAndGroup(s *service.ImageService, cfg *config.Config) http.HandlerFunc {
+func GetImagesByFamilyAndGroup(s service.ImageService, cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		baseURL := cfg.BaseURL
 
@@ -40,7 +40,7 @@ func GetImagesByFamilyAndGroup(s *service.ImageService, cfg *config.Config) http
 	}
 }
 
-func GetImageByID(s *service.ImageService) http.HandlerFunc {
+func GetImageByID(s service.ImageService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		imageIDStr, ok := vars["id"]
@@ -69,7 +69,7 @@ func GetImageByID(s *service.ImageService) http.HandlerFunc {
 	}
 }
 
-func SearchImages(s *service.ImageService, cfg *config.Config) http.HandlerFunc {
+func SearchImages(s service.ImageService, cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		baseURL := cfg.BaseURL
 
@@ -96,7 +96,7 @@ func SearchImages(s *service.ImageService, cfg *config.Config) http.HandlerFunc 
 	}
 }
 
-func GetImageByNumber(service *service.ImageService, cfg *config.Config) http.HandlerFunc {
+func GetImageByNumber(service service.ImageService, cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		baseURL := cfg.BaseURL
 
@@ -130,5 +130,41 @@ func GetImageByNumber(service *service.ImageService, cfg *config.Config) http.Ha
 			http.Error(w, "Failed to encode image to JSON", http.StatusInternalServerError)
 			return
 		}
+	}
+}
+
+func GetLeastUsedImages(s service.ImageService, cfg *config.Config) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Извлеките параметры family и count из строки запроса
+		family := r.URL.Query().Get("family")
+		if family == "" {
+			http.Error(w, "Family parameter is missing", http.StatusBadRequest)
+			return
+		}
+
+		// Извлечение параметра count из запроса и установка значения по умолчанию на 6
+		count := 6
+		countStr := r.URL.Query().Get("count")
+		if countStr != "" {
+			var err error
+			count, err = strconv.Atoi(countStr)
+			if err != nil {
+				http.Error(w, "Invalid count parameter", http.StatusBadRequest)
+				return
+			}
+		} else {
+			count = 6 // значение по умолчанию
+		}
+
+		// Оставшаяся логика остается без изменений
+		images, err := s.GetLeastUsedImages(family, count)
+		if err != nil {
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+
+		// Отправка ответа в формате JSON
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(images)
 	}
 }

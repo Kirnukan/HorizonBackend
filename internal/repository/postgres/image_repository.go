@@ -128,3 +128,37 @@ func (r *ImageRepository) FindImageByNumber(family, group, imageNumber string) (
 	}
 	return image, nil
 }
+
+func (r *ImageRepository) GetLeastUsedImages(family string, limit int) ([]model.Image, error) {
+	// Запрос к базе данных для получения 6 изображений с наименьшим счетчиком использования для определенного семейства
+	const query = `
+    SELECT i.id, i.group_id, i.name, i.file_path, i.thumb_path, i.usage_count, i.meta_tags 
+    FROM "images" i
+    JOIN "groups" g ON i.group_id = g.id 
+    JOIN "families" f ON g.family_id = f.id 
+    WHERE f.name = $1 
+    ORDER BY i.usage_count ASC 
+    LIMIT $2;
+    `
+	rows, err := r.db.Query(query, family, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var images []model.Image
+	for rows.Next() {
+		var img model.Image
+		err := rows.Scan(&img.ID, &img.GroupID, &img.Name, &img.FilePath, &img.ThumbPath, &img.UsageCount, pq.Array(&img.MetaTags))
+		if err != nil {
+			return nil, err
+		}
+		images = append(images, img)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return images, nil
+}

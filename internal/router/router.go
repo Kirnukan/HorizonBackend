@@ -24,6 +24,7 @@ func NewRouter(db *sql.DB, cfg *config.Config) *mux.Router {
 	//можете использовать этот роут для поиска изображений,
 	//передавая в запросе параметры keyword и family.
 	//Например: /search?keyword=Form&family=Forms.
+	r.HandleFunc("/least-used", handler.GetLeastUsedImages(imageService, cfg)).Methods("GET")
 	r.HandleFunc("/search", handler.SearchImages(imageService, cfg)).Methods("GET")
 
 	return r

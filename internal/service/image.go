@@ -7,15 +7,24 @@ import (
 	"log"
 )
 
-type ImageService struct {
+type ImageService interface {
+	GetImagesByFamilyAndGroup(family, group string) ([]model.Image, error)
+	GetImageByIDAndIncreaseUsage(imageID int) (model.Image, error)
+	SearchImages(keyword, family string) ([]model.Image, error)
+	GetImageByNumber(family, group, imageNumber string) (*model.Image, error)
+	IncreaseUsageCount(imageID int) error
+	GetLeastUsedImages(family string, limit int) ([]model.Image, error)
+}
+
+type imageServiceImpl struct {
 	repo *postgres.ImageRepository
 }
 
-func NewImageService(repo *postgres.ImageRepository) *ImageService {
-	return &ImageService{repo: repo}
+func NewImageService(repo *postgres.ImageRepository) ImageService {
+	return &imageServiceImpl{repo: repo}
 }
 
-func (s *ImageService) GetImagesByFamilyAndGroup(family, group string) ([]model.Image, error) {
+func (s *imageServiceImpl) GetImagesByFamilyAndGroup(family, group string) ([]model.Image, error) {
 	// 1. Валидация
 	if family == "" || group == "" {
 		log.Println("Invalid input: family or group is empty")
@@ -37,7 +46,7 @@ func (s *ImageService) GetImagesByFamilyAndGroup(family, group string) ([]model.
 	return images, nil
 }
 
-func (s *ImageService) GetImageByIDAndIncreaseUsage(imageID int) (model.Image, error) {
+func (s *imageServiceImpl) GetImageByIDAndIncreaseUsage(imageID int) (model.Image, error) {
 	// Увеличиваем счетчик использования
 	err := s.repo.IncreaseUsageCount(imageID)
 	if err != nil {
@@ -49,11 +58,11 @@ func (s *ImageService) GetImageByIDAndIncreaseUsage(imageID int) (model.Image, e
 	return img, err
 }
 
-func (s *ImageService) SearchImages(keyword, family string) ([]model.Image, error) {
+func (s *imageServiceImpl) SearchImages(keyword, family string) ([]model.Image, error) {
 	return s.repo.SearchImagesByKeywordAndFamily(keyword, family)
 }
 
-func (s *ImageService) GetImageByNumber(family, group, imageNumber string) (*model.Image, error) {
+func (s *imageServiceImpl) GetImageByNumber(family, group, imageNumber string) (*model.Image, error) {
 	image, err := s.repo.FindImageByNumber(family, group, imageNumber)
 	if err != nil {
 		log.Printf("Service error fetching image by number for family: %s, group: %s, number: %s, Error: %v", family, group, imageNumber, err)
@@ -62,6 +71,10 @@ func (s *ImageService) GetImageByNumber(family, group, imageNumber string) (*mod
 	return image, nil
 }
 
-func (s *ImageService) IncreaseUsageCount(imageID int) error {
+func (s *imageServiceImpl) IncreaseUsageCount(imageID int) error {
 	return s.repo.IncreaseUsageCount(imageID)
+}
+
+func (s *imageServiceImpl) GetLeastUsedImages(family string, limit int) ([]model.Image, error) {
+	return s.repo.GetLeastUsedImages(family, limit)
 }
