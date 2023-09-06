@@ -8,10 +8,10 @@ import (
 )
 
 type ImageService interface {
-	GetImagesByFamilyAndGroup(family, group string) ([]model.Image, error)
+	GetImagesByFamilyGroupSubgroup(family, group, subgroup string) ([]model.Image, error)
 	GetImageByIDAndIncreaseUsage(imageID int) (model.Image, error)
 	SearchImages(keyword, family string) ([]model.Image, error)
-	GetImageByNumber(family, group, imageNumber string) (*model.Image, error)
+	GetImageByNumber(family, group, subgroup, imageNumber string) (*model.Image, error)
 	IncreaseUsageCount(imageID int) error
 	GetLeastUsedImages(family string, limit int) ([]model.Image, error)
 }
@@ -24,17 +24,17 @@ func NewImageService(repo *postgres.ImageRepository) ImageService {
 	return &imageServiceImpl{repo: repo}
 }
 
-func (s *imageServiceImpl) GetImagesByFamilyAndGroup(family, group string) ([]model.Image, error) {
+func (s *imageServiceImpl) GetImagesByFamilyGroupSubgroup(family, group, subgroup string) ([]model.Image, error) {
 	// 1. Валидация
 	if family == "" || group == "" {
-		log.Println("Invalid input: family or group is empty")
-		return nil, errors.New("family and group cannot be empty")
+		log.Println("Invalid input: family, group or subgroup is empty")
+		return nil, errors.New("family, group or subgroup cannot be empty")
 	}
 
 	// 2. Получение изображений
-	images, err := s.repo.GetImagesByFamilyAndGroup(family, group)
+	images, err := s.repo.GetImagesByFamilyGroupSubgroup(family, group, subgroup)
 	if err != nil {
-		log.Printf("Service error fetching images for family: %s and group: %s, Error: %v", family, group, err)
+		log.Printf("Service error fetching images for family: %s, group: %s and subgroup: %s Error: %v", family, group, subgroup, err)
 		return nil, err
 	}
 
@@ -62,10 +62,10 @@ func (s *imageServiceImpl) SearchImages(keyword, family string) ([]model.Image, 
 	return s.repo.SearchImagesByKeywordAndFamily(keyword, family)
 }
 
-func (s *imageServiceImpl) GetImageByNumber(family, group, imageNumber string) (*model.Image, error) {
-	image, err := s.repo.FindImageByNumber(family, group, imageNumber)
+func (s *imageServiceImpl) GetImageByNumber(family, group, subgroup, imageNumber string) (*model.Image, error) {
+	image, err := s.repo.FindImageByNumber(family, group, subgroup, imageNumber)
 	if err != nil {
-		log.Printf("Service error fetching image by number for family: %s, group: %s, number: %s, Error: %v", family, group, imageNumber, err)
+		log.Printf("Service error fetching image by number for family: %s, group: %s, subgroup: %s, number: %s, Error: %v", family, group, subgroup, imageNumber, err)
 		return nil, err
 	}
 	return image, nil

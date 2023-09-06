@@ -25,5 +25,9 @@ migrate-down:
 	@echo "Откат миграций..."
 	$(MIGRATE) -path $(MIGRATIONS_PATH) -database $(PG_CONN_STR) down
 
+
+
+
+
 .PHONY:  start-db start-backend migrate-up migrate-down
 

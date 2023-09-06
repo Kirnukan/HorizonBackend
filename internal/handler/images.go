@@ -10,22 +10,22 @@ import (
 	"strconv"
 )
 
-func GetImagesByFamilyAndGroup(s service.ImageService, cfg *config.Config) http.HandlerFunc {
+func GetImagesByFamilyGroupSubgroup(s service.ImageService, cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		baseURL := cfg.BaseURL
 
 		vars := mux.Vars(r)
 		family := vars["family"]
 		group := vars["group"]
+		subgroup := vars["subgroup"] // Добавлено
 
-		images, err := s.GetImagesByFamilyAndGroup(family, group)
+		images, err := s.GetImagesByFamilyGroupSubgroup(family, group, subgroup) // Обновлено
 		if err != nil {
-			log.Printf("Error fetching images by family and group: %v", err)
+			log.Printf("Error fetching images by family, group and subgroup: %v", err) // Обновлено
 			http.Error(w, "Failed to fetch images", http.StatusInternalServerError)
 			return
 		}
 
-		// Преобразование путей к изображениям
 		for i := range images {
 			images[i].FilePath = baseURL + images[i].FilePath
 			images[i].ThumbPath = baseURL + images[i].ThumbPath
@@ -103,21 +103,19 @@ func GetImageByNumber(service service.ImageService, cfg *config.Config) http.Han
 		vars := mux.Vars(r)
 		family := vars["family"]
 		group := vars["group"]
+		subgroup := vars["subgroup"] // Добавлено
 		number := vars["number"]
 
-		image, err := service.GetImageByNumber(family, group, number)
+		image, err := service.GetImageByNumber(family, group, subgroup, number) // Обновлено
 		if err != nil {
 			log.Printf("Error fetching image by number: %v", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		// Увеличение счетчика использования
-		err = service.IncreaseUsageCount(image.ID) // Предполагая, что у вашей структуры изображения есть поле ID
+		err = service.IncreaseUsageCount(image.ID)
 		if err != nil {
 			log.Printf("Error increasing usage count: %v", err)
-			// Ошибка при увеличении счетчика использования не должна мешать
-			// отправке изображения пользователю, поэтому здесь мы просто логируем ошибку.
 		}
 
 		image.FilePath = baseURL + image.FilePath
@@ -156,12 +154,20 @@ func GetLeastUsedImages(s service.ImageService, cfg *config.Config) http.Handler
 			count = 6 // значение по умолчанию
 		}
 
+		// Логирование входящих параметров
+		log.Printf("Fetching least used images for family: %s and count: %d", family, count)
+
 		// Оставшаяся логика остается без изменений
 		images, err := s.GetLeastUsedImages(family, count)
 		if err != nil {
+			// Логирование ошибки
+			log.Printf("Error fetching least used images: %v", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
+
+		// Логирование количества извлеченных изображений
+		log.Printf("Fetched %d images", len(images))
 
 		// Отправка ответа в формате JSON
 		w.Header().Set("Content-Type", "application/json")

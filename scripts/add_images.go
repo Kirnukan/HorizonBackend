@@ -55,6 +55,7 @@ func toInterfaceSlice(slice []int) []interface{} {
 }
 
 func AddImagesFromFolder(db *sql.DB, baseFolder string) {
+
 	// Шаг 1: Проверка существования файлов
 	rows, err := db.Query(`SELECT id, file_path FROM Images`)
 	if err != nil {
@@ -119,52 +120,66 @@ func AddImagesFromFolder(db *sql.DB, baseFolder string) {
 			}
 			groupName := groupDir.Name()
 
-			_, err := db.Exec(`INSERT INTO Groups (name, family_id) VALUES ($1, (SELECT id FROM Families WHERE name = $2)) ON CONFLICT (name) DO NOTHING`, groupName, familyName)
+			_, err := db.Exec(`INSERT INTO Groups (name, family_id) VALUES ($1, (SELECT id FROM Families WHERE name = $2)) ON CONFLICT (family_id, name) DO NOTHING`, groupName, familyName)
 			if err != nil {
 				panic(err)
 			}
 
-			imageFiles, err := os.ReadDir(filepath.Join(baseFolder, familyName, groupName))
+			subgroupDirs, err := os.ReadDir(filepath.Join(baseFolder, familyName, groupName))
 			if err != nil {
 				panic(err)
 			}
 
-			for _, imageFile := range imageFiles {
-				if imageFile.IsDir() {
+			for _, subgroupDir := range subgroupDirs {
+				if !subgroupDir.IsDir() {
 					continue
 				}
-				imageName := strings.TrimSuffix(imageFile.Name(), filepath.Ext(imageFile.Name()))
+				subgroupName := subgroupDir.Name()
 
-				// Пропустим файлы с суффиксом "_thumb"
-				if strings.Contains(imageName, "_thumb") {
-					continue
-				}
-
-				imagePath := filepath.Join("static", "images", familyName, groupName, imageFile.Name())
-				thumbPath := ""
-
-				if familyName == "Forms" {
-					thumbPath = imagePath
-				} else {
-					thumbPath = filepath.Join("static", "images", familyName, groupName, imageName+"_thumb"+filepath.Ext(imageFile.Name()))
-
-					// Проверяем, существует ли уже сжатое изображение
-					originalFilePath := filepath.Join(baseFolder, familyName, groupName, imageFile.Name())
-					thumbFilePath := filepath.Join(baseFolder, familyName, groupName, imageName+"_thumb"+filepath.Ext(imageFile.Name()))
-					if _, err := os.Stat(thumbFilePath); os.IsNotExist(err) {
-						err = compressImage(originalFilePath, thumbFilePath)
-						if err != nil {
-							panic(err)
-						}
-					}
-				}
-
-				_, err := db.Exec(`
-                    INSERT INTO Images (name, file_path, thumb_path, group_id)
-                    VALUES ($1, $2, $3, (SELECT id FROM Groups WHERE name = $4))
-                    ON CONFLICT (name, group_id) DO NOTHING`, imageName, imagePath, thumbPath, groupName)
+				_, err := db.Exec(`INSERT INTO Subgroups (name, group_id) VALUES ($1, (SELECT id FROM Groups WHERE name = $2)) ON CONFLICT (group_id, name) DO NOTHING`, subgroupName, groupName)
 				if err != nil {
 					panic(err)
+				}
+
+				imageFiles, err := os.ReadDir(filepath.Join(baseFolder, familyName, groupName, subgroupName))
+				if err != nil {
+					panic(err)
+				}
+
+				for _, imageFile := range imageFiles {
+					if imageFile.IsDir() {
+						continue
+					}
+					imageName := strings.TrimSuffix(imageFile.Name(), filepath.Ext(imageFile.Name()))
+
+					if strings.Contains(imageName, "_thumb") {
+						continue
+					}
+
+					imagePath := filepath.Join("static", "images", familyName, groupName, subgroupName, imageFile.Name())
+					thumbPath := ""
+
+					if familyName == "Frames" {
+						thumbPath = imagePath
+					} else {
+						thumbPath = filepath.Join("static", "images", familyName, groupName, subgroupName, imageName+"_thumb"+filepath.Ext(imageFile.Name()))
+						originalFilePath := filepath.Join(baseFolder, familyName, groupName, subgroupName, imageFile.Name())
+						thumbFilePath := filepath.Join(baseFolder, familyName, groupName, subgroupName, imageName+"_thumb"+filepath.Ext(imageFile.Name()))
+						if _, err := os.Stat(thumbFilePath); os.IsNotExist(err) {
+							err = compressImage(originalFilePath, thumbFilePath)
+							if err != nil {
+								panic(err)
+							}
+						}
+					}
+
+					_, err := db.Exec(`
+					    INSERT INTO Images (name, file_path, thumb_path, subgroup_id)
+						VALUES ($1, $2, $3, (SELECT id FROM Subgroups WHERE name = $4 LIMIT 1))
+						ON CONFLICT (name, subgroup_id) DO NOTHING`, imageName, imagePath, thumbPath, subgroupName)
+					if err != nil {
+						panic(err)
+					}
 				}
 			}
 		}
