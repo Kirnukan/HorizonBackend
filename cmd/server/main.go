@@ -10,6 +10,18 @@ import (
 	"net/http"
 )
 
+func setCORSHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+		if r.Method == "OPTIONS" {
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 func main() {
 	cfg, err := config.Load()
 	if err != nil {
@@ -34,7 +46,7 @@ func main() {
 
 	// Запускаем HTTP-сервер на порту 8080
 	fmt.Println("Server started on :8080")
-	err = http.ListenAndServe(":8080", r)
+	err = http.ListenAndServe(":8080", setCORSHeaders(r))
 	if err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
