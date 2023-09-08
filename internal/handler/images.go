@@ -96,6 +96,10 @@ func SearchImages(s service.ImageService, cfg *config.Config) http.HandlerFunc {
 	}
 }
 
+type ImageResponse struct {
+	FilePath string `json:"file_path"`
+}
+
 func GetImageByNumber(service service.ImageService, cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		baseURL := cfg.BaseURL
@@ -118,11 +122,13 @@ func GetImageByNumber(service service.ImageService, cfg *config.Config) http.Han
 			log.Printf("Error increasing usage count: %v", err)
 		}
 
-		image.FilePath = baseURL + image.FilePath
-		image.ThumbPath = baseURL + image.ThumbPath
+		// Создаем новый ответ только с file_path
+		response := ImageResponse{
+			FilePath: baseURL + image.FilePath,
+		}
 
 		w.Header().Set("Content-Type", "application/json")
-		err = json.NewEncoder(w).Encode(image)
+		err = json.NewEncoder(w).Encode(response)
 		if err != nil {
 			log.Printf("Failed to encode image to JSON: %v", err)
 			http.Error(w, "Failed to encode image to JSON", http.StatusInternalServerError)
