@@ -36,7 +36,7 @@ func NewRouter(db *sql.DB, cfg *config.Config) *mux.Router {
 	r.PathPrefix("/static/images/").Handler(http.StripPrefix("/static/images/", http.FileServer(http.Dir("./static/images/"))))
 	r.HandleFunc("/{family}/{group}/{subgroup}/{number:[0-9]+}", handler.GetImageByNumber(imageService, cfg)).Methods("GET") // Обновлено
 	r.HandleFunc("/{family}/{group}/{subgroup}/", handler.GetImagesByFamilyGroupSubgroup(imageService, cfg)).Methods("GET")  // Обновлено
-	//можете использовать этот роут для поиска изображений,
+	//использовать этот роут для поиска изображений,
 	//передавая в запросе параметры keyword и family.
 	//Например: /search?keyword=Form&family=Forms.
 	r.HandleFunc("/least-used", handler.GetLeastUsedImages(imageService, cfg)).Methods("GET")

@@ -174,9 +174,11 @@ func AddImagesFromFolder(db *sql.DB, baseFolder string) {
 					}
 
 					_, err := db.Exec(`
-					    INSERT INTO Images (name, file_path, thumb_path, subgroup_id)
-						VALUES ($1, $2, $3, (SELECT id FROM Subgroups WHERE name = $4 LIMIT 1))
-						ON CONFLICT (name, subgroup_id) DO NOTHING`, imageName, imagePath, thumbPath, subgroupName)
+    INSERT INTO Images (name, file_path, thumb_path, subgroup_id)
+    VALUES ($1, $2, $3, (SELECT s.id FROM Subgroups s
+                         JOIN Groups g ON s.group_id = g.id
+                         WHERE s.name = $4 AND g.name = $5 LIMIT 1))
+    ON CONFLICT (name, subgroup_id) DO NOTHING`, imageName, imagePath, thumbPath, subgroupName, groupName)
 					if err != nil {
 						panic(err)
 					}
