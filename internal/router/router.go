@@ -6,6 +6,7 @@ import (
 	"HorizonBackend/internal/repository/postgres"
 	"HorizonBackend/internal/service"
 	"database/sql"
+	"fmt"
 	"github.com/gorilla/mux"
 	"net/http"
 )
@@ -24,6 +25,12 @@ func setCORSHeaders(handler http.Handler) http.Handler {
 		handler.ServeHTTP(w, r)
 	})
 }
+func loggingMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Printf("Received request: %s %s\n", r.Method, r.RequestURI)
+		next.ServeHTTP(w, r)
+	})
+}
 
 func NewRouter(db *sql.DB, cfg *config.Config) *mux.Router {
 	r := mux.NewRouter()
@@ -32,7 +39,16 @@ func NewRouter(db *sql.DB, cfg *config.Config) *mux.Router {
 	imageRepo := postgres.NewImageRepository(db)
 	imageService := service.NewImageService(imageRepo)
 
+	r.Use(loggingMiddleware)
+
+	r.Use(setCORSHeaders)
+
 	// Регистрация обработчика
+	r.HandleFunc("/increase-usage/{thumbPath:.*}", handler.IncreaseImageUsage(imageService)).Methods("POST", "OPTIONS")
+	//r.HandleFunc("/test/{param:.*}", func(w http.ResponseWriter, r *http.Request) {
+	//	w.Write([]byte("Test route hit"))
+	//}).Methods("POST")
+
 	r.PathPrefix("/static/images/").Handler(http.StripPrefix("/static/images/", http.FileServer(http.Dir("./static/images/"))))
 	r.HandleFunc("/{family}/{group}/{subgroup}/{number:[0-9]+}", handler.GetImageByNumber(imageService, cfg)).Methods("GET") // Обновлено
 	r.HandleFunc("/{family}/{group}/{subgroup}/", handler.GetImagesByFamilyGroupSubgroup(imageService, cfg)).Methods("GET")  // Обновлено

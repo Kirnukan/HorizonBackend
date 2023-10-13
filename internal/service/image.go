@@ -9,10 +9,10 @@ import (
 
 type ImageService interface {
 	GetImagesByFamilyGroupSubgroup(family, group, subgroup string) ([]model.Image, error)
-	GetImageByIDAndIncreaseUsage(imageID int) (model.Image, error)
+	// GetImageByIDAndIncreaseUsage(imageID int) (model.Image, error)
 	SearchImages(keyword, family string) ([]model.Image, error)
 	GetImageByNumber(family, group, subgroup, imageNumber string) (*model.Image, error)
-	IncreaseUsageCount(imageID int) error
+	IncreaseUsageCount(thumbPath string) error
 	GetLeastUsedImages(family string, limit int) ([]model.Image, error)
 }
 
@@ -46,17 +46,17 @@ func (s *imageServiceImpl) GetImagesByFamilyGroupSubgroup(family, group, subgrou
 	return images, nil
 }
 
-func (s *imageServiceImpl) GetImageByIDAndIncreaseUsage(imageID int) (model.Image, error) {
-	// Увеличиваем счетчик использования
-	err := s.repo.IncreaseUsageCount(imageID)
-	if err != nil {
-		return model.Image{}, err
-	}
-
-	// Получаем изображение
-	img, err := s.repo.GetImageByID(imageID)
-	return img, err
-}
+//func (s *imageServiceImpl) GetImageByIDAndIncreaseUsage(thumbPath string) (model.Image, error) {
+//	// Увеличиваем счетчик использования
+//	err := s.repo.IncreaseUsageCount(thumbPath)
+//	if err != nil {
+//		return model.Image{}, err
+//	}
+//
+//	// Получаем изображение
+//	img, err := s.repo.GetImageByID(imageID)
+//	return img, err
+//}
 
 func (s *imageServiceImpl) SearchImages(keyword, family string) ([]model.Image, error) {
 	return s.repo.SearchImagesByKeywordAndFamily(keyword, family)
@@ -71,8 +71,8 @@ func (s *imageServiceImpl) GetImageByNumber(family, group, subgroup, imageNumber
 	return image, nil
 }
 
-func (s *imageServiceImpl) IncreaseUsageCount(imageID int) error {
-	return s.repo.IncreaseUsageCount(imageID)
+func (s *imageServiceImpl) IncreaseUsageCount(thumbPath string) error {
+	return s.repo.IncreaseUsageCount(thumbPath)
 }
 
 func (s *imageServiceImpl) GetLeastUsedImages(family string, limit int) ([]model.Image, error) {

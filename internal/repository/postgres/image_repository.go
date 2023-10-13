@@ -56,8 +56,8 @@ func (r *ImageRepository) GetImagesByFamilyGroupSubgroup(family, group, subgroup
 	return images, nil
 }
 
-func (r *ImageRepository) IncreaseUsageCount(imageID int) error {
-	_, err := r.db.Exec("UPDATE Images SET usage_count = usage_count + 1 WHERE id = $1", imageID)
+func (r *ImageRepository) IncreaseUsageCount(thumbPath string) error {
+	_, err := r.db.Exec("UPDATE Images SET usage_count = usage_count + 1 WHERE thumb_path = $1", thumbPath)
 	return err
 }
 
@@ -76,6 +76,7 @@ func (r *ImageRepository) SearchImagesByKeywordAndFamily(keyword, family string)
         JOIN families f ON g.family_id = f.id
         WHERE (i.name ILIKE $1 OR EXISTS (SELECT 1 FROM unnest(i.meta_tags) AS tag WHERE tag ILIKE $1))
            AND (f.name ILIKE $2)
+           AND (f.name != 'Textures' OR (f.name = 'Textures' AND s.name = 'Color'))
     `
 
 	log.Printf("Query: %s", query)
@@ -140,23 +141,21 @@ func (r *ImageRepository) FindImageByNumber(family, group, subgroup, imageNumber
 }
 
 func (r *ImageRepository) GetLeastUsedImages(family string, limit int) ([]model.Image, error) {
-	// Запрос к базе данных для получения 6 изображений с наименьшим счетчиком использования для определенного семейства
 	const query = `
     SELECT i.id, i.subgroup_id, i.name, i.file_path, i.thumb_path, i.usage_count, i.meta_tags 
-		FROM "images" i
-		JOIN "subgroups" sg ON i.subgroup_id = sg.id 
-		JOIN "groups" g ON sg.group_id = g.id 
-		JOIN "families" f ON g.family_id = f.id 
-		WHERE f.name = $1 
-		ORDER BY i.usage_count ASC 
-		LIMIT $2;
+    FROM "images" i
+    JOIN "subgroups" sg ON i.subgroup_id = sg.id 
+    JOIN "groups" g ON sg.group_id = g.id 
+    JOIN "families" f ON g.family_id = f.id 
+    WHERE f.name = $1 AND (f.name != 'Textures' OR (f.name = 'Textures' AND sg.name = 'Color')) 
+    ORDER BY i.usage_count ASC 
+    LIMIT $2;
     `
 	rows, err := r.db.Query(query, family, limit)
 	if err != nil {
 		log.Printf("Error querying the database: %v", err)
 		return nil, err
 	}
-
 	defer rows.Close()
 
 	var images []model.Image

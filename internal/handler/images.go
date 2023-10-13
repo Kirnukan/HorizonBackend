@@ -4,6 +4,7 @@ import (
 	"HorizonBackend/config"
 	"HorizonBackend/internal/service"
 	"encoding/json"
+	"fmt"
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
@@ -40,34 +41,34 @@ func GetImagesByFamilyGroupSubgroup(s service.ImageService, cfg *config.Config) 
 	}
 }
 
-func GetImageByID(s service.ImageService) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		vars := mux.Vars(r)
-		imageIDStr, ok := vars["id"]
-		if !ok {
-			http.Error(w, "Image ID is missing", http.StatusBadRequest)
-			return
-		}
-
-		imageID, err := strconv.Atoi(imageIDStr)
-		if err != nil {
-			http.Error(w, "Invalid Image ID", http.StatusBadRequest)
-			return
-		}
-
-		img, err := s.GetImageByIDAndIncreaseUsage(imageID)
-		if err != nil {
-			http.Error(w, "Failed to fetch image", http.StatusInternalServerError)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		err = json.NewEncoder(w).Encode(img)
-		if err != nil {
-			http.Error(w, "Failed to encode image to JSON", http.StatusInternalServerError)
-		}
-	}
-}
+//func GetImageByID(s service.ImageService) http.HandlerFunc {
+//	return func(w http.ResponseWriter, r *http.Request) {
+//		vars := mux.Vars(r)
+//		imageIDStr, ok := vars["id"]
+//		if !ok {
+//			http.Error(w, "Image ID is missing", http.StatusBadRequest)
+//			return
+//		}
+//
+//		//imageID, err := strconv.Atoi(imageIDStr)
+//		//if err != nil {
+//		//	http.Error(w, "Invalid Image ID", http.StatusBadRequest)
+//		//	return
+//		//}
+//
+//		//img, err := s.GetImageByIDAndIncreaseUsage(imageID)
+//		//if err != nil {
+//		//	http.Error(w, "Failed to fetch image", http.StatusInternalServerError)
+//		//	return
+//		//}
+//
+//		w.Header().Set("Content-Type", "application/json")
+//		err = json.NewEncoder(w).Encode(img)
+//		if err != nil {
+//			http.Error(w, "Failed to encode image to JSON", http.StatusInternalServerError)
+//		}
+//	}
+//}
 
 func SearchImages(s service.ImageService, cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -100,6 +101,30 @@ type ImageResponse struct {
 	FilePath string `json:"file_path"`
 }
 
+func IncreaseImageUsage(service service.ImageService) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println("IncreaseImageUsage handler called")
+		vars := mux.Vars(r)
+		thumbPath, ok := vars["thumbPath"]
+		fmt.Printf("Extracted thumbPath: %s, success: %v\n", thumbPath, ok)
+
+		if !ok {
+			http.Error(w, "Thumb path is required", http.StatusBadRequest)
+			return
+		}
+
+		err := service.IncreaseUsageCount(thumbPath)
+		if err != nil {
+			fmt.Printf("Error increasing usage count: %v\n", err)
+			http.Error(w, fmt.Sprintf("Error increasing usage count: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		// Отправьте какой-либо ответ об успешной обработке, если всё хорошо
+		w.Write([]byte("Usage count increased"))
+	}
+}
+
 func GetImageByNumber(service service.ImageService, cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		baseURL := cfg.BaseURL
@@ -117,10 +142,10 @@ func GetImageByNumber(service service.ImageService, cfg *config.Config) http.Han
 			return
 		}
 
-		err = service.IncreaseUsageCount(image.ID)
-		if err != nil {
-			log.Printf("Error increasing usage count: %v", err)
-		}
+		//err = service.IncreaseUsageCount(image.ID)
+		//if err != nil {
+		//	log.Printf("Error increasing usage count: %v", err)
+		//}
 
 		// Создаем новый ответ только с file_path
 		response := ImageResponse{
