@@ -200,6 +200,11 @@ func GetLeastUsedImages(s service.ImageService, cfg *config.Config) http.Handler
 		// Логирование количества извлеченных изображений
 		log.Printf("Fetched %d images", len(images))
 
+		for i := range images {
+			images[i].FilePath = cfg.BaseURL + images[i].FilePath
+			images[i].ThumbPath = cfg.BaseURL + images[i].ThumbPath
+		}
+
 		// Отправка ответа в формате JSON
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(images)
