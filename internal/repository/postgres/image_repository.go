@@ -69,53 +69,53 @@ func (r *ImageRepository) GetImageByID(imageID int) (model.Image, error) {
 }
 
 func (r *ImageRepository) SearchImagesByKeywordAndFamily(keyword, family string) ([]model.Image, error) {
+	// Обрезаем пробелы и добавляем проценты для поиска подстроки
 	keyword = strings.TrimSpace(keyword)
 	if keyword == "" {
+		// Если ключевое слово пустое, ничего не возвращаем
+		return []model.Image{}, nil
+	}
+	keyword = "%" + keyword + "%"
 
-		var images []model.Image
-		return images, nil
-		
-	} else {
+	query := `
+	SELECT i.id, i.subgroup_id, i.name, i.file_path, i.thumb_path, i.usage_count, i.meta_tags
+	FROM images i
+	JOIN subgroups s ON i.subgroup_id = s.id
+	JOIN groups g ON s.group_id = g.id
+	JOIN families f ON g.family_id = f.id
+	WHERE (
+		i.name ILIKE f.name || '_' || $1
+		OR EXISTS (
+			SELECT 1 FROM unnest(i.meta_tags) AS tag WHERE tag ILIKE $1
+		)
+	) AND f.name = $2
+	AND s.name NOT ILIKE '%Wide%'
+	AND (f.name != 'Textures' OR (f.name = 'Textures' AND s.name = 'Color'));
 
-		query := `
-		SELECT i.id, i.subgroup_id, i.name, i.file_path, i.thumb_path, i.usage_count, i.meta_tags
-		FROM images i
-		JOIN subgroups s ON i.subgroup_id = s.id
-		JOIN groups g ON s.group_id = g.id
-		JOIN families f ON g.family_id = f.id
-		WHERE (i.name ILIKE $1 OR EXISTS (SELECT 1 FROM unnest(i.meta_tags) AS tag WHERE tag ILIKE $1))
-			  AND f.name ILIKE $2
-			  AND s.name NOT ILIKE '%Wide%'  -- проверка, что имя subgroup не содержит слово 'Wide'
-			  AND (f.name != 'Textures' OR (f.name = 'Textures' AND s.name = 'Color'));
+	`
 
-    `
+	rows, err := r.db.Query(query, keyword, family)
+	if err != nil {
+		log.Printf("Error executing query: %v", err)
+		return nil, err
+	}
+	defer rows.Close()
 
-		log.Printf("Query: %s", query)
-		log.Printf("Keyword: %s, Family: %s", keyword, family)
+	var images []model.Image
+	for rows.Next() {
+		var img model.Image
+		var metaTags pq.StringArray // Для сканирования массива
 
-		rows, err := r.db.Query(query, "%"+keyword+"%", "%"+family+"%")
+		err := rows.Scan(&img.ID, &img.SubgroupID, &img.Name, &img.FilePath, &img.ThumbPath, &img.UsageCount, &metaTags)
 		if err != nil {
-			log.Printf("Error executing query: %v", err)
+			log.Printf("Error scanning row: %v", err)
 			return nil, err
 		}
-		defer rows.Close()
-
-		var images []model.Image
-		for rows.Next() {
-			var img model.Image
-			var metaTags pq.StringArray // Create a pq.StringArray to scan the array
-
-			err := rows.Scan(&img.ID, &img.SubgroupID, &img.Name, &img.FilePath, &img.ThumbPath, &img.UsageCount, &metaTags)
-			if err != nil {
-				log.Printf("Error scanning row: %v", err)
-				return nil, err
-			}
-			img.MetaTags = []string(metaTags) // Convert pq.StringArray to regular []string
-			images = append(images, img)
-		}
-
-		return images, nil
+		img.MetaTags = []string(metaTags) // Преобразование pq.StringArray в обычный []string
+		images = append(images, img)
 	}
+
+	return images, nil
 }
 
 func (r *ImageRepository) getSubgroupIDByName(subgroupName string) (int, error) {
