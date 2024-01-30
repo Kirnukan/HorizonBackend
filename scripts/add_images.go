@@ -55,153 +55,12 @@ func toInterfaceSlice(slice []int) []interface{} {
 	return s
 }
 
-//func AddImagesFromFolder(db *sql.DB, baseFolder string) {
-//
-//	tx, err := db.Begin()
-//	if err != nil {
-//		panic(err)
-//	}
-//	defer tx.Rollback()
-//
-//	// Шаг 1: Проверка существования файлов
-//	rows, err := db.Query(`SELECT id, file_path FROM Images`)
-//	if err != nil {
-//		panic(err)
-//	}
-//	defer rows.Close()
-//
-//	var idsToDelete []int
-//	for rows.Next() {
-//		var id int
-//		var filePath string
-//		if err := rows.Scan(&id, &filePath); err != nil {
-//			panic(err)
-//		}
-//		absolutePath := filepath.Join(baseFolder, filePath)
-//		if _, err := os.Stat(absolutePath); os.IsNotExist(err) {
-//			idsToDelete = append(idsToDelete, id)
-//		}
-//	}
-//
-//	// Удаляем записи, которых нет на диске
-//
-//	if len(idsToDelete) > 0 {
-//		idsStr := ""
-//		for i := range idsToDelete {
-//			idsStr += fmt.Sprintf("$%d,", i+1)
-//		}
-//		idsStr = strings.TrimSuffix(idsStr, ",")
-//
-//		query := "DELETE FROM Images WHERE id IN (" + idsStr + ")"
-//		_, err = db.Exec(query, toInterfaceSlice(idsToDelete)...)
-//		if err != nil {
-//			panic(err)
-//		}
-//	}
-//
-//	// Шаг 2: Добавление новых файлов
-//	familyDirs, err := os.ReadDir(baseFolder)
-//	if err != nil {
-//		panic(err)
-//	}
-//
-//	for _, familyDir := range familyDirs {
-//		if !familyDir.IsDir() {
-//			continue
-//		}
-//		familyName := familyDir.Name()
-//
-//		_, err := db.Exec(`INSERT INTO Families (name) VALUES ($1) ON CONFLICT (name) DO NOTHING`, familyName)
-//		if err != nil {
-//			panic(err)
-//		}
-//
-//		groupDirs, err := os.ReadDir(filepath.Join(baseFolder, familyName))
-//		if err != nil {
-//			panic(err)
-//		}
-//
-//		for _, groupDir := range groupDirs {
-//			if !groupDir.IsDir() {
-//				continue
-//			}
-//			groupName := groupDir.Name()
-//
-//			_, err := db.Exec(`INSERT INTO Groups (name, family_id) VALUES ($1, (SELECT id FROM Families WHERE name = $2)) ON CONFLICT (family_id, name) DO NOTHING`, groupName, familyName)
-//			if err != nil {
-//				panic(err)
-//			}
-//
-//			subgroupDirs, err := os.ReadDir(filepath.Join(baseFolder, familyName, groupName))
-//			if err != nil {
-//				panic(err)
-//			}
-//
-//			for _, subgroupDir := range subgroupDirs {
-//				if !subgroupDir.IsDir() {
-//					continue
-//				}
-//				subgroupName := subgroupDir.Name()
-//
-//				_, err := db.Exec(`INSERT INTO Subgroups (name, group_id) VALUES ($1, (SELECT id FROM Groups WHERE name = $2)) ON CONFLICT (group_id, name) DO NOTHING`, subgroupName, groupName)
-//				if err != nil {
-//					panic(err)
-//				}
-//
-//				imageFiles, err := os.ReadDir(filepath.Join(baseFolder, familyName, groupName, subgroupName))
-//				if err != nil {
-//					panic(err)
-//				}
-//
-//				for _, imageFile := range imageFiles {
-//					if imageFile.IsDir() {
-//						continue
-//					}
-//					imageName := strings.TrimSuffix(imageFile.Name(), filepath.Ext(imageFile.Name()))
-//
-//					if strings.Contains(imageName, "_thumb") {
-//						continue
-//					}
-//
-//					imagePath := filepath.Join("static", "images", familyName, groupName, subgroupName, imageFile.Name())
-//					thumbPath := ""
-//
-//					if familyName == "Frames" {
-//						thumbPath = imagePath
-//					} else {
-//						thumbPath = filepath.Join("static", "images", familyName, groupName, subgroupName, imageName+"_thumb"+filepath.Ext(imageFile.Name()))
-//						originalFilePath := filepath.Join(baseFolder, familyName, groupName, subgroupName, imageFile.Name())
-//						thumbFilePath := filepath.Join(baseFolder, familyName, groupName, subgroupName, imageName+"_thumb"+filepath.Ext(imageFile.Name()))
-//						if _, err := os.Stat(thumbFilePath); os.IsNotExist(err) {
-//							err = compressImage(originalFilePath, thumbFilePath)
-//							if err != nil {
-//								panic(err)
-//							}
-//						}
-//					}
-//
-//					_, err := db.Exec(`
-//    INSERT INTO Images (name, file_path, thumb_path, subgroup_id)
-//    VALUES ($1, $2, $3, (SELECT s.id FROM Subgroups s
-//                         JOIN Groups g ON s.group_id = g.id
-//                         WHERE s.name = $4 AND g.name = $5 LIMIT 1))
-//    ON CONFLICT (name, subgroup_id) DO NOTHING`, imageName, imagePath, thumbPath, subgroupName, groupName)
-//					if err != nil {
-//						panic(err)
-//					}
-//				}
-//			}
-//		}
-//	}
-//}
 
 func getFilePathFromDB(db *sql.DB, imageID int) string {
 	var filePath string
 
-	// Составьте запрос SQL для извлечения пути файла по ID
 	query := `SELECT file_path FROM images WHERE id = $1`
 
-	// Выполните запрос и извлеките путь файла
 	err := db.QueryRow(query, imageID).Scan(&filePath)
 	if err != nil {
 		log.Printf("Error retrieving file path for ID %d: %v\n", imageID, err)
@@ -219,7 +78,6 @@ func AddImagesFromFolder(db *sql.DB, baseFolder string) {
 	}
 	defer tx.Rollback()
 
-	// Шаг 1: Проверка существования файлов
 	fmt.Println("Step 1: Checking for file existence.")
 	rows, err := db.Query(`SELECT id, file_path FROM Images`)
 	if err != nil {
@@ -233,7 +91,7 @@ func AddImagesFromFolder(db *sql.DB, baseFolder string) {
 		var filePath string
 		if err := rows.Scan(&id, &filePath); err != nil {
 			fmt.Printf("Error scanning row: %v\n", err)
-			continue // skip to the next iteration instead of panicking
+			continue
 		}
 
 		absolutePath := filePath
@@ -247,13 +105,11 @@ func AddImagesFromFolder(db *sql.DB, baseFolder string) {
 		}
 	}
 	for _, idToDelete := range idsToDelete {
-		// Извлеките filePath из вашей базы данных, используя idToDelete
 		filePath := getFilePathFromDB(db, idToDelete)
 		fmt.Printf("Deleting entry with ID: %d, FilePath: %s\n", idToDelete, filePath)
 
 	}
 
-	// Удаляем записи, которых нет на диске
 
 	if len(idsToDelete) > 0 {
 		fmt.Printf("Deleting %d Image entries as files do not exist on disk.\n", len(idsToDelete))
@@ -273,7 +129,6 @@ func AddImagesFromFolder(db *sql.DB, baseFolder string) {
 		fmt.Println("No Image entries need deletion.")
 	}
 
-	// Шаг 2: Добавление новых файлов
 	fmt.Println("Step 2: Adding new files.")
 
 	familyDirs, err := os.ReadDir(baseFolder)
