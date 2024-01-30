@@ -18,11 +18,11 @@ func GetImagesByFamilyGroupSubgroup(s service.ImageService, cfg *config.Config) 
 		vars := mux.Vars(r)
 		family := vars["family"]
 		group := vars["group"]
-		subgroup := vars["subgroup"] // Добавлено
+		subgroup := vars["subgroup"] 
 
-		images, err := s.GetImagesByFamilyGroupSubgroup(family, group, subgroup) // Обновлено
+		images, err := s.GetImagesByFamilyGroupSubgroup(family, group, subgroup) 
 		if err != nil {
-			log.Printf("Error fetching images by family, group and subgroup: %v", err) // Обновлено
+			log.Printf("Error fetching images by family, group and subgroup: %v", err) 
 			http.Error(w, "Failed to fetch images", http.StatusInternalServerError)
 			return
 		}
@@ -41,34 +41,6 @@ func GetImagesByFamilyGroupSubgroup(s service.ImageService, cfg *config.Config) 
 	}
 }
 
-//func GetImageByID(s service.ImageService) http.HandlerFunc {
-//	return func(w http.ResponseWriter, r *http.Request) {
-//		vars := mux.Vars(r)
-//		imageIDStr, ok := vars["id"]
-//		if !ok {
-//			http.Error(w, "Image ID is missing", http.StatusBadRequest)
-//			return
-//		}
-//
-//		//imageID, err := strconv.Atoi(imageIDStr)
-//		//if err != nil {
-//		//	http.Error(w, "Invalid Image ID", http.StatusBadRequest)
-//		//	return
-//		//}
-//
-//		//img, err := s.GetImageByIDAndIncreaseUsage(imageID)
-//		//if err != nil {
-//		//	http.Error(w, "Failed to fetch image", http.StatusInternalServerError)
-//		//	return
-//		//}
-//
-//		w.Header().Set("Content-Type", "application/json")
-//		err = json.NewEncoder(w).Encode(img)
-//		if err != nil {
-//			http.Error(w, "Failed to encode image to JSON", http.StatusInternalServerError)
-//		}
-//	}
-//}
 
 func SearchImages(s service.ImageService, cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -120,7 +92,6 @@ func IncreaseImageUsage(service service.ImageService) http.HandlerFunc {
 			return
 		}
 
-		// Отправьте какой-либо ответ об успешной обработке, если всё хорошо
 		w.Write([]byte("Usage count increased"))
 	}
 }
@@ -132,10 +103,10 @@ func GetImageByNumber(service service.ImageService, cfg *config.Config) http.Han
 		vars := mux.Vars(r)
 		family := vars["family"]
 		group := vars["group"]
-		subgroup := vars["subgroup"] // Добавлено
+		subgroup := vars["subgroup"] 
 		number := vars["number"]
 
-		image, err := service.GetImageByNumber(family, group, subgroup, number) // Обновлено
+		image, err := service.GetImageByNumber(family, group, subgroup, number) 
 		if err != nil {
 			log.Printf("Error fetching image by number: %v", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -147,7 +118,6 @@ func GetImageByNumber(service service.ImageService, cfg *config.Config) http.Han
 		//	log.Printf("Error increasing usage count: %v", err)
 		//}
 
-		// Создаем новый ответ только с file_path
 		response := ImageResponse{
 			FilePath: baseURL + image.FilePath,
 		}
@@ -164,14 +134,12 @@ func GetImageByNumber(service service.ImageService, cfg *config.Config) http.Han
 
 func GetLeastUsedImages(s service.ImageService, cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Извлеките параметры family и count из строки запроса
 		family := r.URL.Query().Get("family")
 		if family == "" {
 			http.Error(w, "Family parameter is missing", http.StatusBadRequest)
 			return
 		}
 
-		// Извлечение параметра count из запроса и установка значения по умолчанию на 6
 		count := 6
 		countStr := r.URL.Query().Get("count")
 		if countStr != "" {
@@ -182,22 +150,18 @@ func GetLeastUsedImages(s service.ImageService, cfg *config.Config) http.Handler
 				return
 			}
 		} else {
-			count = 6 // значение по умолчанию
+			count = 6
 		}
 
-		// Логирование входящих параметров
 		log.Printf("Fetching least used images for family: %s and count: %d", family, count)
 
-		// Оставшаяся логика остается без изменений
 		images, err := s.GetLeastUsedImages(family, count)
 		if err != nil {
-			// Логирование ошибки
 			log.Printf("Error fetching least used images: %v", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
 
-		// Логирование количества извлеченных изображений
 		log.Printf("Fetched %d images", len(images))
 
 		for i := range images {
@@ -205,7 +169,6 @@ func GetLeastUsedImages(s service.ImageService, cfg *config.Config) http.Handler
 			images[i].ThumbPath = cfg.BaseURL + images[i].ThumbPath
 		}
 
-		// Отправка ответа в формате JSON
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(images)
 	}
